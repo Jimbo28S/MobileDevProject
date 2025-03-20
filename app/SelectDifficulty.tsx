@@ -1,9 +1,10 @@
+import React from 'react';
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import MenuButton from "../components/MenuButton";
 
-export default function App() {
+export default function SelectDifficulty() {
   const router = useRouter();
 
   return (
@@ -15,7 +16,7 @@ export default function App() {
 
       <MenuButton
         buttonText="Easy"
-        onPress={() => router.push("./GameScreen")}
+        onPress={() => router.push("/GameScreen")}
       />
 
       <MenuButton
