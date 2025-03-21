@@ -12,7 +12,7 @@ export default function App() {
       <Text style={styles.TitleText}>Jon</Text>
       <Text style={styles.TitleText}>Joe</Text>
       <Image
-        source={require("../assets/coffeeCup.png")}
+        source={require("../assets/TransparentCoffee.png")}
         style={styles.CoffeeCup}
       />
       <MenuButton
@@ -46,5 +46,6 @@ const styles = StyleSheet.create({
   CoffeeCup: {
     height: 100,
     width: 100,
+    marginLeft: 25,
   },
 });
