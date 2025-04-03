@@ -1,153 +1,227 @@
-import React, { useState, useEffect } from "react";
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
-import MenuButton from "../components/MenuButton";
-import { getXColor, getOColor } from "../util/Storage";
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Dimensions,
+} from 'react-native';
+
+const initialBoard = Array(9).fill(null);
+const screenWidth = Dimensions.get('window').width;
+const boardSize = screenWidth * 0.9;
+const squareSize = boardSize / 3;
 
 export default function GameScreen() {
-  const player1Piece = "../assets/player1Piece.png";
-  const player2Piece = "../assets/player2Piece.png";
-  const router = useRouter();
-  const [board, setBoard] = useState(Array(9).fill(null));
-  const [player, setPlayer] = useState("X");
-  const [player1Color, setPlayer1Color] = useState("blue");
-  const [player2Color, setPlayer2Color] = useState("red");
+  const [board, setBoard] = useState(initialBoard);
+  const [isPlayerTurn, setIsPlayerTurn] = useState(true);
+  const [gameOver, setGameOver] = useState(false);
+  const [winningLine, setWinningLine] = useState<number[] | null>(null);
 
   useEffect(() => {
-    const loadColors = async () => {
-      setPlayer1Color(await getXColor());
-      setPlayer2Color(await getOColor());
-    };
-    loadColors();
-  }, []);
+    if (!isPlayerTurn && !gameOver) {
+      const timer = setTimeout(() => {
+        makeComputerMove();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isPlayerTurn]);
 
-  const PlacePiece = (index: number) => {
-    if (board[index] !== null) {
-      alert("Please Select an Empty Sqaure");
-    } else {
-      setBoard((prevBoard) => {
-        const newBoard = [...prevBoard];
-        newBoard[index] = player;
-        return newBoard;
-      });
+  const handlePress = (index: number) => {
+    if (board[index] || gameOver || !isPlayerTurn) return;
 
-      setPlayer((prev) => (prev === "X" ? "O" : "X"));
+    const newBoard = [...board];
+    newBoard[index] = 'X';
+    setBoard(newBoard);
+    setIsPlayerTurn(false);
+
+    const winner = checkWinner(newBoard);
+    if (winner) {
+      endGame(winner);
+    } else if (newBoard.every(cell => cell)) {
+      endGame('Draw');
     }
   };
 
+  const makeComputerMove = () => {
+    const emptyIndices = board
+      .map((val, idx) => (val === null ? idx : null))
+      .filter(val => val !== null) as number[];
+
+    if (emptyIndices.length === 0) return;
+
+    const randomIndex =
+      emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+    const newBoard = [...board];
+    newBoard[randomIndex] = 'O';
+    setBoard(newBoard);
+    setIsPlayerTurn(true);
+
+    const winner = checkWinner(newBoard);
+    if (winner) {
+      endGame(winner);
+    } else if (newBoard.every(cell => cell)) {
+      endGame('Draw');
+    }
+  };
+
+  const checkWinner = (b: string[]): string | null => {
+    const lines = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6],
+    ];
+    for (let line of lines) {
+      const [a, bIdx, c] = line;
+      if (b[a] && b[a] === b[bIdx] && b[a] === b[c]) {
+        setWinningLine(line);
+        return b[a];
+      }
+    }
+    return null;
+  };
+
+  const endGame = (result: string) => {
+    setGameOver(true);
+    setTimeout(() => {
+      Alert.alert(
+        result === 'Draw' ? 'Draw!' : `${result} wins!`,
+        '',
+        [{ text: 'Play Again', onPress: resetGame }]
+      );
+    }, 200);
+  };
+
+  const resetGame = () => {
+    setBoard(initialBoard);
+    setIsPlayerTurn(true);
+    setGameOver(false);
+    setWinningLine(null);
+  };
+
+  const renderSquare = (index: number) => (
+    <TouchableOpacity
+      key={index}
+      style={styles.square}
+      onPress={() => handlePress(index)}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.mark}>{board[index]}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
-      <View style={styles.PieceLegend}>
-        <View style={styles.PlayerContainer}>
-          <Text>You: </Text>
-          <Image
-            source={require(player1Piece)}
-            style={[styles.CoffeeCup, { tintColor: player1Color }]}
-          />
-        </View>
-
-        <View style={styles.PlayerContainer}>
-          <Text>Opponent: </Text>
-          <Image
-            source={require(player2Piece)}
-            style={[styles.CoffeeCup, { tintColor: player2Color }]}
-          />
-        </View>
+      <Text style={styles.title}>Tic Tac Toe</Text>
+      <View style={styles.board}>
+        {board.map((_, index) => renderSquare(index))}
+        {winningLine && <WinningLine line={winningLine} />}
       </View>
-
-      {/* Square 1 */}
-      <View style={styles.GameBoard}>
-        {board.map((value, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.BoardSegment,
-              index % 3 !== 2 && styles.RightBorder,
-              index < 6 && styles.BottomBorder,
-            ]}
-            onPress={() => PlacePiece(index)}
-          >
-            {value && (
-              <Image
-                source={
-                  value === "X" ? require(player1Piece) : require(player2Piece)
-                }
-                style={[
-                  styles.Piece,
-                  { tintColor: value === "X" ? player1Color : player2Color },
-                ]}
-              />
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <MenuButton buttonText="End Game" onPress={() => router.push("/")} />
     </View>
   );
 }
 
+const WinningLine = ({ line }: { line: number[] }) => {
+  const sortedLine = [...line].sort((a, b) => a - b);
+  const lineKey = sortedLine.join('-');
+
+  const getLineStyle = () => {
+    // Horizontal lines
+    if (lineKey === '0-1-2') return { top: squareSize/2 - 2, left: 0, width: boardSize, height: 4 };
+    if (lineKey === '3-4-5') return { top: squareSize*1.5 - 2, left: 0, width: boardSize, height: 4 };
+    if (lineKey === '6-7-8') return { top: squareSize*2.5 - 2, left: 0, width: boardSize, height: 4 };
+
+    // Vertical lines
+    if (lineKey === '0-3-6') return { top: 0, left: squareSize/2 - 2, width: 4, height: boardSize };
+    if (lineKey === '1-4-7') return { top: 0, left: squareSize*1.5 - 2, width: 4, height: boardSize };
+    if (lineKey === '2-5-8') return { top: 0, left: squareSize*2.5 - 2, width: 4, height: boardSize };
+
+    // Diagonal lines - using precise mathematical calculations
+    if (lineKey === '0-4-8') {
+      return {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: Math.sqrt(2) * boardSize,
+        height: 4,
+        transform: [{ rotate: '45deg' }],
+        transformOrigin: '0% 0%',
+      };
+    }
+    if (lineKey === '2-4-6') {
+      return {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: Math.sqrt(2) * boardSize,
+        height: 4,
+        transform: [{ rotate: '-45deg' }],
+        transformOrigin: '100% 0%',
+      };
+    }
+
+    return null;
+  };
+
+  const lineStyle = getLineStyle();
+  if (!lineStyle) return null;
+
+  return (
+    <View
+      style={[
+        {
+          position: 'absolute',
+          backgroundColor: 'red',
+          borderRadius: 2,
+          zIndex: 10,
+        },
+        lineStyle,
+      ]}
+    />
+  );
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFEBC6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
   },
-
-  TitleText: {
-    fontSize: 50,
-    color: "#573B1B",
+  title: {
+    fontSize: 40,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 40,
   },
-
-  CoffeeCup: {
-    height: 40,
-    width: 40,
+  board: {
+    width: boardSize,
+    height: boardSize,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+    position: 'relative',
   },
-
-  GameBoard: {
-    width: 302,
-    height: 302,
-    display: "flex",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 50,
+  square: {
+    width: squareSize,
+    height: squareSize,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FAFAFA',
   },
-
-  BoardSegment: {
-    width: 100,
-    height: 100,
-    justifyContent: "center",
-  },
-
-  RightBorder: {
-    borderRightWidth: 2,
-  },
-
-  BottomBorder: {
-    borderBottomWidth: 2,
-  },
-
-  Piece: {
-    height: 70,
-    width: 70,
-    alignSelf: "center",
-  },
-
-  PieceLegend: {
-    width: 250,
-    height: 100,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 20,
-    marginBottom: 90,
-  },
-
-  PlayerContainer: {
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 20,
+  mark: {
+    fontSize: 70,
+    fontWeight: 'bold',
+    color: '#444',
   },
 });
