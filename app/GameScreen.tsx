@@ -1,256 +1,257 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  Dimensions,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-
-const initialBoard = Array(9).fill(null);
-const screenWidth = Dimensions.get('window').width;
-const boardSize = screenWidth * 0.9;
-const squareSize = boardSize / 3;
+import React, { useState, useEffect } from "react";
+import { StyleSheet, Text, View, Image, TouchableOpacity, Alert } from "react-native";
+import { useRouter } from "expo-router";
+import MenuButton from "../components/MenuButton";
+import { getXColor, getOColor } from "../util/Storage";
 
 export default function GameScreen() {
-  const navigation = useNavigation();
-  const [board, setBoard] = useState(initialBoard);
+  const router = useRouter();
+  const [board, setBoard] = useState(Array(9).fill(null));
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
+  const [playerColor, setPlayerColor] = useState("blue");
+  const [computerColor, setComputerColor] = useState("red");
   const [gameOver, setGameOver] = useState(false);
-  const [winningLine, setWinningLine] = useState<number[] | null>(null);
 
+  // Load colors from storage
+  useEffect(() => {
+    const loadColors = async () => {
+      setPlayerColor(await getXColor());
+      setComputerColor(await getOColor());
+    };
+    loadColors();
+  }, []);
+
+  // Computer move logic
   useEffect(() => {
     if (!isPlayerTurn && !gameOver) {
       const timer = setTimeout(() => {
         makeComputerMove();
-      }, 500);
+      }, 800);
       return () => clearTimeout(timer);
     }
-  }, [isPlayerTurn]);
+  }, [isPlayerTurn, gameOver]);
 
-  const handlePress = (index: number) => {
-    if (board[index] || gameOver || !isPlayerTurn) return;
+  const calculateWinner = (squares: (string | null)[]) => {
+    const lines = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+      [0, 4, 8], [2, 4, 6], // diagonals
+    ];
 
-    const newBoard = [...board];
-    newBoard[index] = 'X';
-    setBoard(newBoard);
-    setIsPlayerTurn(false);
-
-    const winner = checkWinner(newBoard);
-    if (winner) {
-      endGame(winner);
-    } else if (newBoard.every(cell => cell)) {
-      endGame('Draw');
+    for (let line of lines) {
+      const [a, b, c] = line;
+      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+        return squares[a];
+      }
     }
+
+    return squares.includes(null) ? null : "draw";
   };
 
   const makeComputerMove = () => {
+    // Simple AI - first checks for winning move, then blocking move, then random
     const emptyIndices = board
       .map((val, idx) => (val === null ? idx : null))
       .filter(val => val !== null) as number[];
 
     if (emptyIndices.length === 0) return;
 
-    const randomIndex =
-      emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
-    const newBoard = [...board];
-    newBoard[randomIndex] = 'O';
-    setBoard(newBoard);
-    setIsPlayerTurn(true);
-
-    const winner = checkWinner(newBoard);
-    if (winner) {
-      endGame(winner);
-    } else if (newBoard.every(cell => cell)) {
-      endGame('Draw');
-    }
-  };
-
-  const checkWinner = (b: string[]): string | null => {
-    const lines = [
-      [0, 1, 2],
-      [3, 4, 5],
-      [6, 7, 8],
-      [0, 3, 6],
-      [1, 4, 7],
-      [2, 5, 8],
-      [0, 4, 8],
-      [2, 4, 6],
-    ];
-    for (let line of lines) {
-      const [a, bIdx, c] = line;
-      if (b[a] && b[a] === b[bIdx] && b[a] === b[c]) {
-        setWinningLine(line);
-        return b[a];
+    // Try to win
+    for (let index of emptyIndices) {
+      const newBoard = [...board];
+      newBoard[index] = "O";
+      if (calculateWinner(newBoard) === "O") {
+        finishMove(index);
+        return;
       }
     }
-    return null;
+
+    // Block player
+    for (let index of emptyIndices) {
+      const newBoard = [...board];
+      newBoard[index] = "X";
+      if (calculateWinner(newBoard) === "X") {
+        const newBoard = [...board];
+        newBoard[index] = "O";
+        setBoard(newBoard);
+        checkGameEnd(newBoard);
+        setIsPlayerTurn(true);
+        return;
+      }
+    }
+
+    // Random move
+    const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+    finishMove(randomIndex);
   };
 
-  const endGame = (result: string) => {
-    setGameOver(true);
-    setTimeout(() => {
-      Alert.alert(
-        result === 'Draw' ? 'Draw!' : `${result} wins!`,
-        '',
-        [
-          { text: 'Play Again', onPress: resetGame },
-          { 
-            text: 'Go Back', 
-            onPress: () => (navigation as any).goBack(),
-            style: 'cancel' 
-          }
-        ]
-      );
-    }, 200);
+  const finishMove = (index: number) => {
+    const newBoard = [...board];
+    newBoard[index] = "O";
+    setBoard(newBoard);
+    checkGameEnd(newBoard);
+    setIsPlayerTurn(true);
+  };
+
+  const checkGameEnd = (newBoard: (string | null)[]) => {
+    const winner = calculateWinner(newBoard);
+    if (winner) {
+      setGameOver(true);
+      setTimeout(() => {
+        Alert.alert(
+          winner === "draw" ? "Game Over" : `${winner === "X" ? "You" : "Computer"} Won!`,
+          winner === "draw" ? "It's a draw!" : `${winner === "X" ? "Congratulations!" : "Better luck next time!"}`,
+          [{ text: "Play Again", onPress: resetGame }]
+        );
+      }, 300);
+    }
+  };
+
+  const handlePress = (index: number) => {
+    if (board[index] || !isPlayerTurn || gameOver) return;
+
+    const newBoard = [...board];
+    newBoard[index] = "X";
+    setBoard(newBoard);
+    setIsPlayerTurn(false);
+    checkGameEnd(newBoard);
   };
 
   const resetGame = () => {
-    setBoard(initialBoard);
+    setBoard(Array(9).fill(null));
     setIsPlayerTurn(true);
     setGameOver(false);
-    setWinningLine(null);
   };
 
-  const renderSquare = (index: number) => (
-    <TouchableOpacity
-      key={index}
-      style={styles.square}
-      onPress={() => handlePress(index)}
-      activeOpacity={0.7}
-    >
-      <Text style={styles.mark}>{board[index]}</Text>
-    </TouchableOpacity>
-  );
+  const renderSquare = (index: number) => {
+    const value = board[index];
+    const imageSource = value === "X" 
+      ? require("../assets/player1Piece.png") 
+      : require("../assets/player2Piece.png");
+    const tintColor = value === "X" ? playerColor : computerColor;
+
+    return (
+      <TouchableOpacity
+        key={index}
+        style={[
+          styles.BoardSegment,
+          index % 3 !== 2 && styles.RightBorder,
+          index < 6 && styles.BottomBorder,
+        ]}
+        onPress={() => handlePress(index)}
+        disabled={!isPlayerTurn || gameOver}
+      >
+        {value && (
+          <Image
+            source={imageSource}
+            style={[styles.Piece, { tintColor }]}
+          />
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.backButton} 
-        onPress={() => (navigation as any).goBack()}
-      >
-        <Text style={styles.backButtonText}>← Back</Text>
-      </TouchableOpacity>
-      
-      <Text style={styles.title}>Tic Tac Toe</Text>
-      <View style={styles.board}>
-        {board.map((_, index) => renderSquare(index))}
-        {winningLine && <WinningLine line={winningLine} />}
+      <View style={styles.PieceLegend}>
+        <View style={styles.PlayerContainer}>
+          <Text style={styles.PlayerText}>You: </Text>
+          <Image
+            source={require("../assets/player1Piece.png")}
+            style={[styles.PieceSmall, { tintColor: playerColor }]}
+          />
+        </View>
+
+        <View style={styles.PlayerContainer}>
+          <Text style={styles.PlayerText}>Computer: </Text>
+          <Image
+            source={require("../assets/player2Piece.png")}
+            style={[styles.PieceSmall, { tintColor: computerColor }]}
+          />
+        </View>
       </View>
+
+      <Text style={styles.statusText}>
+        {gameOver 
+          ? "Game Over" 
+          : isPlayerTurn 
+            ? "Your turn" 
+            : "Computer thinking..."}
+      </Text>
+
+      <View style={styles.GameBoard}>
+        {Array(9).fill(null).map((_, index) => renderSquare(index))}
+      </View>
+
+      <MenuButton 
+        buttonText={gameOver ? "Play Again" : "Quit Game"} 
+        onPress={gameOver ? resetGame : () => router.push("/")} 
+      />
     </View>
   );
 }
 
-const WinningLine = ({ line }: { line: number[] }) => {
-  const sortedLine = [...line].sort((a, b) => a - b);
-  const lineKey = sortedLine.join('-');
-
-  // Calculate the exact center offset for perfect alignment
-  const centerOffset = squareSize / 2 - 2; // 2 is half of line height (4/2)
-
-  const getLineStyle = () => {
-    // Horizontal lines
-    if (lineKey === '0-1-2') return { top: centerOffset, left: 0, width: boardSize, height: 4 };
-    if (lineKey === '3-4-5') return { top: squareSize + centerOffset, left: 0, width: boardSize, height: 4 };
-    if (lineKey === '6-7-8') return { top: squareSize * 2 + centerOffset, left: 0, width: boardSize, height: 4 };
-
-    // Vertical lines
-    if (lineKey === '0-3-6') return { top: 0, left: centerOffset, width: 4, height: boardSize };
-    if (lineKey === '1-4-7') return { top: 0, left: squareSize + centerOffset, width: 4, height: boardSize };
-    if (lineKey === '2-5-8') return { top: 0, left: squareSize * 2 + centerOffset, width: 4, height: boardSize };
-
-    // Diagonal lines - using precise mathematical calculations
-    if (lineKey === '0-4-8') {
-      return {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: Math.sqrt(2) * boardSize,
-        height: 4,
-        transform: [{ rotate: '45deg' }],
-        transformOrigin: '0% 0%',
-      };
-    }
-    if (lineKey === '2-4-6') {
-      return {
-        position: 'absolute',
-        top: 0,
-        right: 0,
-        width: Math.sqrt(2) * boardSize,
-        height: 4,
-        transform: [{ rotate: '-45deg' }],
-        transformOrigin: '100% 0%',
-      };
-    }
-
-    return null;
-  };
-
-  const style = getLineStyle();
-  if (!style) return null;
-
-  return (
-    <View
-      style={[
-        {
-          position: 'absolute',
-          backgroundColor: 'red',
-          borderRadius: 2,
-          zIndex: 10,
-        },
-        style,
-      ]}
-    />
-  );
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
+    backgroundColor: "#FFEBC6",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
   },
-  title: {
-    fontSize: 40,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 40,
+  statusText: {
+    fontSize: 20,
+    marginVertical: 15,
+    color: "#573B1B",
+    height: 30,
   },
-  board: {
-    width: boardSize,
-    height: boardSize,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-    position: 'relative',
+  Piece: {
+    height: 70,
+    width: 70,
+    alignSelf: "center",
   },
-  square: {
-    width: squareSize,
-    height: squareSize,
-    borderWidth: 1,
-    borderColor: '#DDD',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FAFAFA',
+  PieceSmall: {
+    height: 30,
+    width: 30,
   },
-  mark: {
-    fontSize: 70,
-    fontWeight: 'bold',
-    color: '#444',
+  GameBoard: {
+    width: 300,
+    height: 300,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 30,
+    backgroundColor: "#FFF",
+    borderRadius: 10,
+    overflow: "hidden",
+    elevation: 3,
   },
-  backButton: {
-    position: 'absolute',
-    top: 40,
-    left: 20,
-    padding: 10,
+  BoardSegment: {
+    width: 100,
+    height: 100,
+    justifyContent: "center",
+    backgroundColor: "#FAFAFA",
   },
-  backButtonText: {
-    fontSize: 18,
-    color: '#333',
+  RightBorder: {
+    borderRightWidth: 2,
+    borderColor: "#DDD",
+  },
+  BottomBorder: {
+    borderBottomWidth: 2,
+    borderColor: "#DDD",
+  },
+  PieceLegend: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    marginBottom: 20,
+  },
+  PlayerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  PlayerText: {
+    fontSize: 16,
+    color: "#573B1B",
   },
 });
