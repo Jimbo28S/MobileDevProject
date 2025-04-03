@@ -1,3 +1,4 @@
+// SelectDifficulty.tsx
 import React from 'react';
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
@@ -16,17 +17,17 @@ export default function SelectDifficulty() {
 
       <MenuButton
         buttonText="Easy"
-        onPress={() => router.push("/GameScreen")}
+        onPress={() => router.push({ pathname: "/GameScreen", params: { difficulty: "easy" } })}
       />
 
       <MenuButton
         buttonText="Medium"
-        onPress={() => router.push("./GameScreen")}
+        onPress={() => router.push({ pathname: "/GameScreen", params: { difficulty: "medium" } })}
       />
 
       <MenuButton
         buttonText="Hard"
-        onPress={() => router.push("./GameScreen")}
+        onPress={() => router.push({ pathname: "/GameScreen", params: { difficulty: "hard" } })}
       />
 
       <View style={styles.spacer}></View>

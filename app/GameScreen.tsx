@@ -1,11 +1,15 @@
+// GameScreen.tsx
 import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View, Image, TouchableOpacity, Alert } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import MenuButton from "../components/MenuButton";
 import { getXColor, getOColor } from "../util/Storage";
 
 export default function GameScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const difficulty = params.difficulty || "medium"; // default to medium if not specified
+  
   const [board, setBoard] = useState(Array(9).fill(null));
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [playerColor, setPlayerColor] = useState("blue");
@@ -49,13 +53,36 @@ export default function GameScreen() {
   };
 
   const makeComputerMove = () => {
-    // Simple AI - first checks for winning move, then blocking move, then random
     const emptyIndices = board
       .map((val, idx) => (val === null ? idx : null))
       .filter(val => val !== null) as number[];
 
     if (emptyIndices.length === 0) return;
 
+    // Different AI behavior based on difficulty
+    switch (difficulty) {
+      case "easy":
+        makeEasyMove(emptyIndices);
+        break;
+      case "medium":
+        makeMediumMove(emptyIndices);
+        break;
+      case "hard":
+        makeHardMove(emptyIndices);
+        break;
+      default:
+        makeMediumMove(emptyIndices);
+    }
+  };
+
+  const makeEasyMove = (emptyIndices: number[]) => {
+    // Easy: completely random moves
+    const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+    finishMove(randomIndex);
+  };
+
+  const makeMediumMove = (emptyIndices: number[]) => {
+    // Medium: tries to win or block, otherwise random
     // Try to win
     for (let index of emptyIndices) {
       const newBoard = [...board];
@@ -71,18 +98,72 @@ export default function GameScreen() {
       const newBoard = [...board];
       newBoard[index] = "X";
       if (calculateWinner(newBoard) === "X") {
-        const newBoard = [...board];
-        newBoard[index] = "O";
-        setBoard(newBoard);
-        checkGameEnd(newBoard);
-        setIsPlayerTurn(true);
+        finishMove(index);
         return;
       }
     }
 
     // Random move
-    const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
-    finishMove(randomIndex);
+    makeEasyMove(emptyIndices);
+  };
+
+  const makeHardMove = (emptyIndices: number[]) => {
+    // Hard: perfect AI using minimax algorithm
+    const bestMove = findBestMove();
+    if (bestMove !== -1) {
+      finishMove(bestMove);
+    }
+  };
+
+  const findBestMove = (): number => {
+    // Minimax algorithm implementation
+    let bestScore = -Infinity;
+    let bestMove = -1;
+
+    for (let i = 0; i < 9; i++) {
+      if (board[i] === null) {
+        board[i] = "O";
+        let score = minimax(board, 0, false);
+        board[i] = null;
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = i;
+        }
+      }
+    }
+
+    return bestMove;
+  };
+
+  const minimax = (board: (string | null)[], depth: number, isMaximizing: boolean): number => {
+    const winner = calculateWinner(board);
+    if (winner === "O") return 10 - depth;
+    if (winner === "X") return depth - 10;
+    if (winner === "draw") return 0;
+
+    if (isMaximizing) {
+      let bestScore = -Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (board[i] === null) {
+          board[i] = "O";
+          let score = minimax(board, depth + 1, false);
+          board[i] = null;
+          bestScore = Math.max(score, bestScore);
+        }
+      }
+      return bestScore;
+    } else {
+      let bestScore = Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (board[i] === null) {
+          board[i] = "X";
+          let score = minimax(board, depth + 1, true);
+          board[i] = null;
+          bestScore = Math.min(score, bestScore);
+        }
+      }
+      return bestScore;
+    }
   };
 
   const finishMove = (index: number) => {
@@ -178,6 +259,10 @@ export default function GameScreen() {
             ? "Your turn" 
             : "Computer thinking..."}
       </Text>
+      
+      <Text style={styles.difficultyText}>
+        Difficulty: {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+      </Text>
 
       <View style={styles.GameBoard}>
         {Array(9).fill(null).map((_, index) => renderSquare(index))}
@@ -204,6 +289,11 @@ const styles = StyleSheet.create({
     marginVertical: 15,
     color: "#573B1B",
     height: 30,
+  },
+  difficultyText: {
+    fontSize: 16,
+    color: "#573B1B",
+    marginBottom: 10,
   },
   Piece: {
     height: 70,
