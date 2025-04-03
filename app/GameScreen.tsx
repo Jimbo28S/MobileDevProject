@@ -7,6 +7,7 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 const initialBoard = Array(9).fill(null);
 const screenWidth = Dimensions.get('window').width;
@@ -14,6 +15,7 @@ const boardSize = screenWidth * 0.9;
 const squareSize = boardSize / 3;
 
 export default function GameScreen() {
+  const navigation = useNavigation();
   const [board, setBoard] = useState(initialBoard);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [gameOver, setGameOver] = useState(false);
@@ -93,7 +95,14 @@ export default function GameScreen() {
       Alert.alert(
         result === 'Draw' ? 'Draw!' : `${result} wins!`,
         '',
-        [{ text: 'Play Again', onPress: resetGame }]
+        [
+          { text: 'Play Again', onPress: resetGame },
+          { 
+            text: 'Go Back', 
+            onPress: () => (navigation as any).goBack(),
+            style: 'cancel' 
+          }
+        ]
       );
     }, 200);
   };
@@ -118,6 +127,13 @@ export default function GameScreen() {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity 
+        style={styles.backButton} 
+        onPress={() => (navigation as any).goBack()}
+      >
+        <Text style={styles.backButtonText}>← Back</Text>
+      </TouchableOpacity>
+      
       <Text style={styles.title}>Tic Tac Toe</Text>
       <View style={styles.board}>
         {board.map((_, index) => renderSquare(index))}
@@ -131,16 +147,19 @@ const WinningLine = ({ line }: { line: number[] }) => {
   const sortedLine = [...line].sort((a, b) => a - b);
   const lineKey = sortedLine.join('-');
 
+  // Calculate the exact center offset for perfect alignment
+  const centerOffset = squareSize / 2 - 2; // 2 is half of line height (4/2)
+
   const getLineStyle = () => {
     // Horizontal lines
-    if (lineKey === '0-1-2') return { top: squareSize/2 - 2, left: 0, width: boardSize, height: 4 };
-    if (lineKey === '3-4-5') return { top: squareSize*1.5 - 2, left: 0, width: boardSize, height: 4 };
-    if (lineKey === '6-7-8') return { top: squareSize*2.5 - 2, left: 0, width: boardSize, height: 4 };
+    if (lineKey === '0-1-2') return { top: centerOffset, left: 0, width: boardSize, height: 4 };
+    if (lineKey === '3-4-5') return { top: squareSize + centerOffset, left: 0, width: boardSize, height: 4 };
+    if (lineKey === '6-7-8') return { top: squareSize * 2 + centerOffset, left: 0, width: boardSize, height: 4 };
 
     // Vertical lines
-    if (lineKey === '0-3-6') return { top: 0, left: squareSize/2 - 2, width: 4, height: boardSize };
-    if (lineKey === '1-4-7') return { top: 0, left: squareSize*1.5 - 2, width: 4, height: boardSize };
-    if (lineKey === '2-5-8') return { top: 0, left: squareSize*2.5 - 2, width: 4, height: boardSize };
+    if (lineKey === '0-3-6') return { top: 0, left: centerOffset, width: 4, height: boardSize };
+    if (lineKey === '1-4-7') return { top: 0, left: squareSize + centerOffset, width: 4, height: boardSize };
+    if (lineKey === '2-5-8') return { top: 0, left: squareSize * 2 + centerOffset, width: 4, height: boardSize };
 
     // Diagonal lines - using precise mathematical calculations
     if (lineKey === '0-4-8') {
@@ -169,8 +188,8 @@ const WinningLine = ({ line }: { line: number[] }) => {
     return null;
   };
 
-  const lineStyle = getLineStyle();
-  if (!lineStyle) return null;
+  const style = getLineStyle();
+  if (!style) return null;
 
   return (
     <View
@@ -181,7 +200,7 @@ const WinningLine = ({ line }: { line: number[] }) => {
           borderRadius: 2,
           zIndex: 10,
         },
-        lineStyle,
+        style,
       ]}
     />
   );
@@ -223,5 +242,15 @@ const styles = StyleSheet.create({
     fontSize: 70,
     fontWeight: 'bold',
     color: '#444',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    padding: 10,
+  },
+  backButtonText: {
+    fontSize: 18,
+    color: '#333',
   },
 });
