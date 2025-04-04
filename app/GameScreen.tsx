@@ -8,7 +8,7 @@ import { getXColor, getOColor } from "../util/Storage";
 export default function GameScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const difficulty = params.difficulty || "medium"; // default to medium if not specified
+  const difficulty = params.difficulty || "medium"; 
   
   const [board, setBoard] = useState(Array(9).fill(null));
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
@@ -76,14 +76,11 @@ export default function GameScreen() {
   };
 
   const makeEasyMove = (emptyIndices: number[]) => {
-    // Easy: completely random moves
     const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
     finishMove(randomIndex);
   };
 
   const makeMediumMove = (emptyIndices: number[]) => {
-    // Medium: tries to win or block, otherwise random
-    // Try to win
     for (let index of emptyIndices) {
       const newBoard = [...board];
       newBoard[index] = "O";
@@ -108,7 +105,6 @@ export default function GameScreen() {
   };
 
   const makeHardMove = (emptyIndices: number[]) => {
-    // Hard: perfect AI using minimax algorithm
     const bestMove = findBestMove();
     if (bestMove !== -1) {
       finishMove(bestMove);
@@ -116,7 +112,6 @@ export default function GameScreen() {
   };
 
   const findBestMove = (): number => {
-    // Minimax algorithm implementation
     let bestScore = -Infinity;
     let bestMove = -1;
 
@@ -210,7 +205,7 @@ export default function GameScreen() {
       ? require("../assets/player1Piece.png") 
       : require("../assets/player2Piece.png");
     const tintColor = value === "X" ? playerColor : computerColor;
-
+  
     return (
       <TouchableOpacity
         key={index}
@@ -309,25 +304,24 @@ const styles = StyleSheet.create({
     height: 300,
     flexDirection: "row",
     flexWrap: "wrap",
+    marginTop: 20,
     marginBottom: 30,
-    backgroundColor: "#FFF",
-    borderRadius: 10,
+    backgroundColor: "transparent", 
     overflow: "hidden",
-    elevation: 3,
   },
   BoardSegment: {
     width: 100,
     height: 100,
     justifyContent: "center",
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "transparent", 
   },
   RightBorder: {
-    borderRightWidth: 2,
-    borderColor: "#DDD",
+    borderRightWidth: 3,
+    borderColor: "#573B1B", 
   },
   BottomBorder: {
-    borderBottomWidth: 2,
-    borderColor: "#DDD",
+    borderBottomWidth: 3,
+    borderColor: "#573B1B",
   },
   PieceLegend: {
     flexDirection: "row",
