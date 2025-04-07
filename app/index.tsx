@@ -3,9 +3,9 @@ import { StyleSheet, Text, View, Image } from "react-native";
 import { useRouter } from "expo-router";
 import MenuButton from "../components/MenuButton";
 
+
 export default function App() {
   const router = useRouter();
-
   return (
     <View style={styles.container}>
       <Text style={styles.TitleText}>Jan</Text>
@@ -29,6 +29,7 @@ export default function App() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

@@ -13,6 +13,8 @@ import MenuButton from "../components/MenuButton";
 import { getXColor, getOColor, getBoardColor } from "../util/Storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+
+
 export default function GameScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -366,6 +368,7 @@ export default function GameScreen() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

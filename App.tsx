@@ -1,13 +1,24 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
+import {useFonts} from "expo-font";
+import {Slot} from "expo-router";
+
+//const useFonts = () => {
+  //return Font.loadAsync({
+    //"Tropicalnature": require("/assets/fonts/Tropicalnature.ttf"),
+ // });
+//};
 
 export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+  const [fontsLoaded] = useFonts({
+    "Tropicalnature": require("./assets/fonts/Tropicalnature.ttf"),
+  }); 
+  if (!fontsLoaded) {
+    return null;
+  }
+
+  return <Slot/>;
+
 }
 
 const styles = StyleSheet.create({
