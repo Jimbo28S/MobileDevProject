@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import MenuButton from "../components/MenuButton";
-import { getXColor, getOColor } from "../util/Storage";
+import { getXColor, getOColor, getBoardColor } from "../util/Storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function GameScreen() {
@@ -23,12 +23,14 @@ export default function GameScreen() {
   const [playerColor, setPlayerColor] = useState("blue");
   const [computerColor, setComputerColor] = useState("red");
   const [gameOver, setGameOver] = useState(false);
+  const [boardColor, setBoardColor] = useState("black");
 
   // Load colors from storage
   useEffect(() => {
     const loadColors = async () => {
       setPlayerColor(await getXColor());
       setComputerColor(await getOColor());
+      setBoardColor(await getBoardColor());
     };
     loadColors();
   }, []);
@@ -305,7 +307,9 @@ export default function GameScreen() {
         style={[
           styles.BoardSegment,
           index % 3 !== 2 && styles.RightBorder,
+          { borderColor: boardColor },
           index < 6 && styles.BottomBorder,
+          { borderColor: boardColor },
         ]}
         onPress={() => handlePress(index)}
         disabled={!isPlayerTurn || gameOver}

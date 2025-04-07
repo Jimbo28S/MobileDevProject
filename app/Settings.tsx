@@ -11,7 +11,14 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import MenuButton from "../components/MenuButton";
-import { saveXColor, saveOColor, getXColor, getOColor } from "../util/Storage";
+import {
+  saveXColor,
+  saveOColor,
+  getXColor,
+  getOColor,
+  saveBoardColor,
+  getBoardColor,
+} from "../util/Storage";
 import ColorWheel from "react-native-wheel-color-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -20,13 +27,16 @@ export default function Settings() {
 
   const [xColor, setXColor] = useState("blue");
   const [oColor, setOColor] = useState("red");
+  const [boardColor, setBoardColor] = useState("black");
   const [pickerVisibility, setPickerVisibility] = useState(false);
   const [pickerVisibilityP2, setPickerVisibilityP2] = useState(false);
+  const [pickerVisibilityP3, setPickerVisibilityP3] = useState(false);
 
   useEffect(() => {
     const loadColors = async () => {
       setXColor(await getXColor());
       setOColor(await getOColor());
+      setBoardColor(await getBoardColor());
     };
     loadColors();
   }, []);
@@ -39,6 +49,10 @@ export default function Settings() {
     setPickerVisibilityP2(true);
   };
 
+  const changeBoardColor = () => {
+    setPickerVisibilityP3(true);
+  };
+
   const handleP1ColorChange = async (color: string) => {
     await saveXColor(color);
     setXColor(color);
@@ -47,6 +61,11 @@ export default function Settings() {
   const handleP2ColorChange = async (color: string) => {
     await saveOColor(color);
     setOColor(color);
+  };
+
+  const handleBoardColorChange = async (color: string) => {
+    await saveBoardColor(color);
+    setBoardColor(color);
   };
 
   const resetStats = async () => {
@@ -82,6 +101,13 @@ export default function Settings() {
           onPress={() => changeP2Color()}
         >
           <Text style={styles.SettingText}>Player 2 Color</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.SettingButton}
+          onPress={() => changeBoardColor()}
+        >
+          <Text style={styles.SettingText}>Change Board Color</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -147,6 +173,36 @@ export default function Settings() {
               marginBottom: 20,
             }}
             onPress={() => setPickerVisibilityP2(false)}
+          >
+            <Text>Save</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={pickerVisibilityP3}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalContainer}>
+          <Text style={styles.modalTitle}>Pick a Color for the game board</Text>
+          <ColorWheel
+            color={boardColor}
+            onColorChange={handleBoardColorChange}
+          />
+
+          <TouchableOpacity
+            style={{
+              height: 50,
+              width: 200,
+              backgroundColor: "#FFEBC6",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 50,
+              marginTop: 25,
+              marginBottom: 20,
+            }}
+            onPress={() => setPickerVisibilityP3(false)}
           >
             <Text>Save</Text>
           </TouchableOpacity>
