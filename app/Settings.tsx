@@ -7,11 +7,13 @@ import {
   Image,
   TouchableOpacity,
   Modal,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import MenuButton from "../components/MenuButton";
 import { saveXColor, saveOColor, getXColor, getOColor } from "../util/Storage";
 import ColorWheel from "react-native-wheel-color-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Settings() {
   const router = useRouter();
@@ -47,6 +49,22 @@ export default function Settings() {
     setOColor(color);
   };
 
+  const resetStats = async () => {
+    const defaultStats = {
+      eWins: 0,
+      eLosses: 0,
+      eDraws: 0,
+      mWins: 0,
+      mLosses: 0,
+      mDraws: 0,
+      hWins: 0,
+      hLosses: 0,
+      hDraws: 0,
+    };
+    await AsyncStorage.setItem("stats", JSON.stringify(defaultStats));
+    Alert.alert("Settings successfully reset!");
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.TitleText}>Settings</Text>
@@ -66,11 +84,10 @@ export default function Settings() {
           <Text style={styles.SettingText}>Player 2 Color</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.SettingButton}>
-          <Text style={styles.SettingText}>Game Board Color</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.SettingButton}>
+        <TouchableOpacity
+          style={styles.SettingButton}
+          onPress={() => resetStats()}
+        >
           <Text style={styles.SettingText}>Reset Stats</Text>
         </TouchableOpacity>
       </View>

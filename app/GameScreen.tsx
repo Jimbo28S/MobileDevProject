@@ -1,15 +1,23 @@
 // GameScreen.tsx
 import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View, Image, TouchableOpacity, Alert } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import MenuButton from "../components/MenuButton";
 import { getXColor, getOColor } from "../util/Storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function GameScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const difficulty = params.difficulty || "medium"; 
-  
+  const difficulty = params.difficulty || "medium";
+
   const [board, setBoard] = useState(Array(9).fill(null));
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [playerColor, setPlayerColor] = useState("blue");
@@ -37,14 +45,23 @@ export default function GameScreen() {
 
   const calculateWinner = (squares: (string | null)[]) => {
     const lines = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-      [0, 4, 8], [2, 4, 6], // diagonals
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8], // rows
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8], // columns
+      [0, 4, 8],
+      [2, 4, 6], // diagonals
     ];
 
     for (let line of lines) {
       const [a, b, c] = line;
-      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+      if (
+        squares[a] &&
+        squares[a] === squares[b] &&
+        squares[a] === squares[c]
+      ) {
         return squares[a];
       }
     }
@@ -55,7 +72,7 @@ export default function GameScreen() {
   const makeComputerMove = () => {
     const emptyIndices = board
       .map((val, idx) => (val === null ? idx : null))
-      .filter(val => val !== null) as number[];
+      .filter((val) => val !== null) as number[];
 
     if (emptyIndices.length === 0) return;
 
@@ -76,7 +93,8 @@ export default function GameScreen() {
   };
 
   const makeEasyMove = (emptyIndices: number[]) => {
-    const randomIndex = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+    const randomIndex =
+      emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
     finishMove(randomIndex);
   };
 
@@ -130,7 +148,11 @@ export default function GameScreen() {
     return bestMove;
   };
 
-  const minimax = (board: (string | null)[], depth: number, isMaximizing: boolean): number => {
+  const minimax = (
+    board: (string | null)[],
+    depth: number,
+    isMaximizing: boolean
+  ): number => {
     const winner = calculateWinner(board);
     if (winner === "O") return 10 - depth;
     if (winner === "X") return depth - 10;
@@ -175,9 +197,23 @@ export default function GameScreen() {
       setGameOver(true);
       setTimeout(() => {
         Alert.alert(
-          winner === "draw" ? "Game Over" : `${winner === "X" ? "You" : "Computer"} Won!`,
-          winner === "draw" ? "It's a draw!" : `${winner === "X" ? "Congratulations!" : "Better luck next time!"}`,
-          [{ text: "Play Again", onPress: resetGame }]
+          winner === "draw"
+            ? "Game Over"
+            : `${winner === "X" ? "You" : "Computer"} Won!`,
+          winner === "draw"
+            ? "It's a draw!"
+            : `${
+                winner === "X" ? "Congratulations!" : "Better luck next time!"
+              }`,
+          [
+            {
+              text: "Play Again",
+              onPress: () => {
+                resetGame();
+                updateStats(winner);
+              },
+            },
+          ]
         );
       }, 300);
     }
@@ -199,13 +235,70 @@ export default function GameScreen() {
     setGameOver(false);
   };
 
+  const updateStats = async (winner: any) => {
+    try {
+      const statsJSON = await AsyncStorage.getItem("stats");
+      const stats = statsJSON
+        ? JSON.parse(statsJSON)
+        : {
+            eWins: 0,
+            eLosses: 0,
+            eDraws: 0,
+            mWins: 0,
+            mLosses: 0,
+            mDraws: 0,
+            hWins: 0,
+            hLosses: 0,
+            hDraws: 0,
+          };
+
+      switch (difficulty) {
+        case "easy":
+          if (winner === "X") {
+            stats.eWins += 1;
+          } else if (winner === "draw") {
+            stats.eDraws += 1;
+          } else {
+            stats.eLosses += 1;
+          }
+          await AsyncStorage.setItem("stats", JSON.stringify(stats));
+          break;
+
+        case "medium":
+          if (winner === "X") {
+            stats.mWins += 1;
+          } else if (winner === "draw") {
+            stats.mDraws += 1;
+          } else {
+            stats.mLosses += 1;
+          }
+          await AsyncStorage.setItem("stats", JSON.stringify(stats));
+          break;
+
+        case "hard":
+          if (winner === "X") {
+            stats.hWins += 1;
+          } else if (winner === "draw") {
+            stats.hDraws += 1;
+          } else {
+            stats.hLosses += 1;
+          }
+          await AsyncStorage.setItem("stats", JSON.stringify(stats));
+          break;
+      }
+    } catch (e) {
+      console.error("Error updating stats:", e);
+    }
+  };
+
   const renderSquare = (index: number) => {
     const value = board[index];
-    const imageSource = value === "X" 
-      ? require("../assets/player1Piece.png") 
-      : require("../assets/player2Piece.png");
+    const imageSource =
+      value === "X"
+        ? require("../assets/player1Piece.png")
+        : require("../assets/player2Piece.png");
     const tintColor = value === "X" ? playerColor : computerColor;
-  
+
     return (
       <TouchableOpacity
         key={index}
@@ -218,10 +311,7 @@ export default function GameScreen() {
         disabled={!isPlayerTurn || gameOver}
       >
         {value && (
-          <Image
-            source={imageSource}
-            style={[styles.Piece, { tintColor }]}
-          />
+          <Image source={imageSource} style={[styles.Piece, { tintColor }]} />
         )}
       </TouchableOpacity>
     );
@@ -248,24 +338,26 @@ export default function GameScreen() {
       </View>
 
       <Text style={styles.statusText}>
-        {gameOver 
-          ? "Game Over" 
-          : isPlayerTurn 
-            ? "Your turn" 
-            : "Computer thinking..."}
+        {gameOver
+          ? "Game Over"
+          : isPlayerTurn
+          ? "Your turn"
+          : "Computer thinking..."}
       </Text>
-      
+
       <Text style={styles.difficultyText}>
         Difficulty: {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
       </Text>
 
       <View style={styles.GameBoard}>
-        {Array(9).fill(null).map((_, index) => renderSquare(index))}
+        {Array(9)
+          .fill(null)
+          .map((_, index) => renderSquare(index))}
       </View>
 
-      <MenuButton 
-        buttonText={gameOver ? "Play Again" : "Quit Game"} 
-        onPress={gameOver ? resetGame : () => router.push("/")} 
+      <MenuButton
+        buttonText={gameOver ? "Play Again" : "Quit Game"}
+        onPress={gameOver ? resetGame : () => router.push("/")}
       />
     </View>
   );
@@ -306,18 +398,18 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     marginTop: 20,
     marginBottom: 30,
-    backgroundColor: "transparent", 
+    backgroundColor: "transparent",
     overflow: "hidden",
   },
   BoardSegment: {
     width: 100,
     height: 100,
     justifyContent: "center",
-    backgroundColor: "transparent", 
+    backgroundColor: "transparent",
   },
   RightBorder: {
     borderRightWidth: 3,
-    borderColor: "#573B1B", 
+    borderColor: "#573B1B",
   },
   BottomBorder: {
     borderBottomWidth: 3,
@@ -333,7 +425,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginBottom : 14,
+    marginBottom: 14,
   },
   PlayerText: {
     fontSize: 16,
